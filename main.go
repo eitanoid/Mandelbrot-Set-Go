@@ -20,7 +20,6 @@ import (
 //TODO:
 // restrict y and x iterations to be the same
 // reduce memory use
-// introduce worker pools to iteration step
 // concurrently write to the png
 
 type complex struct {
@@ -81,14 +80,10 @@ func (p *mandlebrot_plane) init_plane(min_Z complex, max_Z complex, increments i
 }
 
 func (p *mandlebrot_plane) iterations(max_iterations int) {
-	var wg sync.WaitGroup
-	var divide_iterables [workers][]*mandlebrot_point
+	work_queue := make(chan []*mandlebrot_point)
+	var chunk_size int = 10000
 
-	num_points := len(p.iterable)
-	slice_size := num_points / workers
-
-	worker_iteration := func(iterable []*mandlebrot_point) { //TODO: pointer issue, potentially assign pointers in this block
-		defer wg.Done()
+	worker_iteration := func(iterable []*mandlebrot_point) {
 		Z := [2]float64{}
 		C := [2]float64{}
 		var next_x, next_y float64
@@ -117,15 +112,34 @@ func (p *mandlebrot_plane) iterations(max_iterations int) {
 		}
 	}
 
-	for i := 0; i < workers; i++ { // split work
-		start := i * slice_size
-		end := min(start+slice_size, num_points)
-		divide_iterables[i] = p.iterable[start:end]
-		wg.Add(1)
-		go worker_iteration(divide_iterables[i])
+	for i := 0; i < workers; i++ { // worker pool
+		go func() {
+			for points, ok := <-work_queue; ok; points, ok = <-work_queue {
+				worker_iteration(points)
+			}
+		}()
+	}
+
+	//slice_size := num_points / (num_chunks)
+	/*  make_square_chunk := func(x int, y int, slice []*mandlebrot_point, row_len int, square_len int) []*mandlebrot_point{
+		chunk := make([]*mandlebrot_point,square_len*square_len)
+		for i:= 0; i < square_len; i++{
+			for j:=0; j < square_len; j++{
+				chunk[square_len*i + j] = slice[y*row_len + x]
+			}
+			return chunk
+		}
+	} */
+
+	num_points := len(p.iterable) // split work
+	for i, start, end := 0, 0, 0; end < num_points; i++ {
+		start = i * chunk_size
+		end = min(start+chunk_size, num_points)
+		work_queue <- p.iterable[start:end]
 
 	}
-	wg.Wait()
+
+	close(work_queue)
 
 	non_divergent := []*mandlebrot_point{} // clean up divergent points
 	for _, point := range p.iterable {
@@ -173,14 +187,14 @@ func main() {
 
 	init_time := time.Now()
 	mandlebrot_set.init_plane(min_Z, max_Z, increment)
-	fmt.Printf("Finished initialising the plane with %d points, it took %dms \n", len(mandlebrot_set.iterable), time.Since(init_time).Milliseconds())
+	fmt.Printf("Initialized %d points taking %dms \n", len(mandlebrot_set.iterable), time.Since(init_time).Milliseconds())
 
 	now := time.Now()
 	mandlebrot_set.iterations(max_iterations)
 
 	end := time.Since(now).Milliseconds()
 
-	fmt.Printf("%d workers iterating %d times on %d points took %d ms \n", workers, max_iterations, increment*increment, end)
+	fmt.Printf("%d workers completed %d iterations on %d points in %d ms \n", workers, max_iterations, increment*increment, end)
 
 	plot_time := time.Now()
 
