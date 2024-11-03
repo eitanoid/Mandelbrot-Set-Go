@@ -20,6 +20,8 @@ import (
 //TODO:
 // restrict y and x iterations to be the same
 // reduce memory use
+// introduce worker pools to iteration step
+// concurrently write to the png
 
 type complex struct {
 	X, Y float64
@@ -33,14 +35,14 @@ type mandlebrot_point struct {
 }
 
 type mandlebrot_plane struct {
-	plane    []mandlebrot_point // the whole grid
-	iterable [][]*float64       // points which did not yet diverge, each point is a 5 slice of pointers
+	plane    []mandlebrot_point  // the whole grid
+	iterable []*mandlebrot_point // slice of pointers to array
 }
 
 var (
 	min_Z     complex = complex{X: -2, Y: -2}
 	max_Z     complex = complex{X: 2, Y: 2}
-	increment int     = 1000
+	increment int     = 10000
 )
 
 const (
@@ -54,7 +56,7 @@ func (p *mandlebrot_plane) init_plane(min_Z complex, max_Z complex, increments i
 	y_step := (max_Z.Y - min_Z.Y) / float64(increments)
 	p.plane = make([]mandlebrot_point, increments*increments)
 
-	p.iterable = make([][]*float64, increments*increments) // initialize slice
+	p.iterable = make([]*mandlebrot_point, increments*increments) // initialize slice
 
 	var wg sync.WaitGroup
 	for w := 0; w < workers; w++ { //populate slices using goroutines
@@ -69,9 +71,7 @@ func (p *mandlebrot_plane) init_plane(min_Z complex, max_Z complex, increments i
 						iteration: 0,
 						id:        float64(i*increments + j)} // stopgap solution because the pointer for point[4] isnt working
 					p.plane[i*increments+j] = point
-
-					point_pointers := []*float64{&point.Z.X, &point.Z.Y, &point.C.X, &point.C.Y, &point.id}
-					p.iterable[i*increments+j] = point_pointers
+					p.iterable[i*increments+j] = &p.plane[i*increments+j]
 				}
 			}
 		}(w, &wg)
@@ -82,20 +82,20 @@ func (p *mandlebrot_plane) init_plane(min_Z complex, max_Z complex, increments i
 
 func (p *mandlebrot_plane) iterations(max_iterations int) {
 	var wg sync.WaitGroup
-	var divide_iterables [workers][][]*float64
+	var divide_iterables [workers][]*mandlebrot_point
 
 	num_points := len(p.iterable)
 	slice_size := num_points / workers
 
-	worker_iteration := func(iterable [][]*float64) { //TODO: pointer issue, potentially assign pointers in this block
+	worker_iteration := func(iterable []*mandlebrot_point) { //TODO: pointer issue, potentially assign pointers in this block
 		defer wg.Done()
 		Z := [2]float64{}
 		C := [2]float64{}
 		var next_x, next_y float64
 		for i, point := range iterable { //next generation
 			diverged := false
-			Z = [2]float64{*point[0], *point[1]}
-			C = [2]float64{*point[2], *point[3]}
+			Z = [2]float64{point.Z.X, point.Z.Y}
+			C = [2]float64{point.C.X, point.C.Y}
 
 			for j := 0; j < max_iterations && !diverged; j++ {
 
@@ -105,15 +105,13 @@ func (p *mandlebrot_plane) iterations(max_iterations int) {
 
 				if Z[0]*Z[0]+Z[1]*Z[1] >= 4 { // remove the pointers of divergent points
 					diverged = true
-					//*point[4] = float64(j + 1) // this bit doesnt work for whatever reason so added id attribute to points
-					p.plane[int(*point[4])].iteration = float64(j + 1)
+					point.iteration += float64(j + 1)
 					iterable[i] = nil
 					break
 				}
 			}
 			if !diverged { // set the final position
-				*point[0] = Z[0]
-				*point[1] = Z[1]
+				point.Z = complex{Z[0], Z[1]}
 			}
 
 		}
@@ -129,10 +127,10 @@ func (p *mandlebrot_plane) iterations(max_iterations int) {
 	}
 	wg.Wait()
 
-	non_divergent := [][]*float64{} // clean up divergent points
-	for _, pointers := range p.iterable {
-		if pointers != nil {
-			non_divergent = append(non_divergent, pointers)
+	non_divergent := []*mandlebrot_point{} // clean up divergent points
+	for _, point := range p.iterable {
+		if point != nil {
+			non_divergent = append(non_divergent, point)
 		}
 	}
 	p.iterable = non_divergent
@@ -152,7 +150,6 @@ func (p *mandlebrot_plane) plot_to_png() {
 		row := pos % increment
 		col := pos / increment
 		color_val := uint8(255 - (255 / (1 + 0.05*point.iteration)))
-
 		img.Set(row, col, color.RGBA{color_val, color_val, color_val, 255})
 
 	}
