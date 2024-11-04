@@ -106,7 +106,6 @@ func (p *mandlebrot_plane) iterations(max_iterations int) {
 			}
 			if !diverged { // set the final position
 				point.Z = complex{Z[0], Z[1]}
-				//converge_counter++
 
 			}
 		}
