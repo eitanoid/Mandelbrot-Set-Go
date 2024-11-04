@@ -1,5 +1,4 @@
-![Mandlebrot Set]mandlebrot.png
-
+![mandlebrot](https://github.com/user-attachments/assets/c49d0f8a-ddad-448f-85a1-90b7cd4d3403)
 
 # The Mandelbrot Set
 
