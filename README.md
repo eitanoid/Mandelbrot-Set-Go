@@ -10,7 +10,7 @@ $Z_{n+1} = Z_n^2 + c$
 
 ## Decription
 
-A mandlebrot set generator using Go taking in a resolution and a max iteration count and outputting a PNG file of the mandlebrot set at that depth.
+A mandlebrot set generator using Go taking in a resolution and a max iteration count and outputting a PNG file of the mandlebrot set at that depth with a brightness adjusted based on the escape iteration of each point.
 
 The algorithm runs concurrently with the implementation of goroutines and worker pools.
 
