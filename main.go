@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"image"
 	"image/color"
@@ -35,20 +36,16 @@ type mandlebrot_plane struct {
 }
 
 var (
-	//normally -2. -2, 2,2
-	min_Z complex = complex{X: -2, Y: -2}
-	//max_Z complex = complex{X: 1, Y: 1}
-	//x_len float64 = 2
-	//y_len float64 = 2
-
-	step_size float64 = float64(4) / 5000
-	x_steps   int     = 5000 //int(x_len / step_size)
-	y_steps   int     = 5000 //int(y_len / step_size)
+	rinput = flag.Int("r", 2000, "Set the resolution")
+	iinput = flag.Int("i", 500, "Set the number of iterations")
 )
-
-const (
-	max_iterations int = 5000
-	workers        int = 20
+var (
+	min_Z          complex = complex{X: -2, Y: -2}
+	step_size      float64
+	x_steps        int //int(x_len / step_size)
+	y_steps        int //int(y_len / step_size)
+	max_iterations int
+	workers        int
 )
 
 func (p *mandlebrot_plane) init_plane(min_Z complex, x_steps int, y_steps int) {
@@ -175,8 +172,14 @@ func (p *mandlebrot_plane) plot_to_png() {
 }
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	flag.Parse()
+	x_steps = *rinput
+	y_steps = x_steps
+	max_iterations = *iinput
+	step_size = float64(4) / float64(x_steps)
 
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	workers = runtime.NumCPU()
 	mandlebrot_set := mandlebrot_plane{}
 
 	init_time := time.Now()
