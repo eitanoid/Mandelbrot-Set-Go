@@ -1,3 +1,6 @@
+![Mandlebrot Set]mandlebrot.png
+
+
 # The Mandelbrot Set
 
 The **Mandelbrot Set** is a famous fractal structure in the complex plane, defined by all points  $c = a + bi$ for which the sequence $Z_n$ does not diverge to infinity. 
