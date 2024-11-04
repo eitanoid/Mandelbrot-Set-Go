@@ -1,5 +1,5 @@
 
-![mandlebrot](https://github.com/user-attachments/assets/d2b1f758-5cc4-4bbe-b3d2-487ca3c25225)
+![mandlebrot_cropped](https://github.com/user-attachments/assets/a5db090a-e2a5-47bc-b6b3-3d84b619391f)
 
 # The Mandelbrot Set
 
