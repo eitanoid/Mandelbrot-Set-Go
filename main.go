@@ -19,6 +19,9 @@ import (
 
 //TODO:
 // fix not working for rectangles
+//make using 2d slices instead of a 1d one
+//point, resolution input to generate a slice
+//add progress bar
 
 type complex struct {
 	X, Y float64
