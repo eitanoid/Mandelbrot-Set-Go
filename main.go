@@ -9,19 +9,17 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 // set plane of complex mandlebrot points
 // array of pointers to non divergent points
 // split the array based on the number of workers
-// go routines to increment
+// go routines to iterate the points by chunks
 
 //TODO:
-// fix not working for rectangles
-//make using 2d slices instead of a 1d one
-//point, resolution input to generate a slice
-//add progress bar
+//
 
 type complex struct {
 	X, Y float64
@@ -34,42 +32,43 @@ type mandlebrot_point struct {
 }
 
 type mandlebrot_plane struct {
-	plane    []mandlebrot_point  // the whole grid
-	iterable []*mandlebrot_point // slice of pointers to array
+	plane    [][]mandlebrot_point // the whole grid
+	iterable []*mandlebrot_point  // slice of pointers to array
 }
 
-var (
-	rinput = flag.Int("r", 2000, "Set the resolution")
-	iinput = flag.Int("i", 500, "Set the number of iterations")
+var ( // user input
+	rinput     = flag.Int("r", 2000, "Set the picture resolution")
+	iinput     = flag.Int("i", 500, "Set the number of iterations")
+	minx_input = flag.Float64("lx", -2, "Set the lower x bound for the picture")
+	miny_input = flag.Float64("ly", -2, "Set the lower y bound for the picture")
+	maxx_input = flag.Float64("ux", 2, "Set the upper x bound for the picture")
+	maxy_input = flag.Float64("uy", 2, "Set the upper y bound for the picture")
 )
 var (
-	min_Z          complex = complex{X: -2, Y: -2}
-	step_size      float64
-	x_steps        int //int(x_len / step_size)
-	y_steps        int //int(y_len / step_size)
-	max_iterations int
-	workers        int
+	workers int
 )
 
-func (p *mandlebrot_plane) init_plane(min_Z complex, x_steps int, y_steps int) {
+func (p *mandlebrot_plane) init_plane(min_Z complex, x_steps int, y_steps int, step_size float64) {
 
-	p.plane = make([]mandlebrot_point, x_steps*y_steps)
+	p.plane = make([][]mandlebrot_point, y_steps)
 
 	p.iterable = make([]*mandlebrot_point, x_steps*y_steps) // initialize slice
 
 	var wg sync.WaitGroup
 	for w := 0; w < workers; w++ { //populate slices using goroutines
+
 		wg.Add(1)
 		go func(id int, wg *sync.WaitGroup) {
 			defer wg.Done()
 			for y := w; y < y_steps; y += workers { // rows
+				p.plane[y] = make([]mandlebrot_point, x_steps)
 				for x := 0; x < x_steps; x++ { // cols
 					point := mandlebrot_point{
 						Z:         complex{0, 0},
 						C:         complex{X: min_Z.X + float64(x)*step_size, Y: min_Z.Y + float64(y)*step_size},
 						iteration: 0}
-					p.plane[y*y_steps+x] = point
-					p.iterable[y*y_steps+x] = &p.plane[y*y_steps+x]
+					p.plane[y][x] = point
+					p.iterable[y*x_steps+x] = &p.plane[y][x]
 				}
 			}
 		}(w, &wg)
@@ -82,6 +81,7 @@ func (p *mandlebrot_plane) iterations(max_iterations int) {
 	chunk_size := 10000
 	num_points := len(p.iterable)
 	work_queue := make(chan []*mandlebrot_point)
+	var progress atomic.Int32
 	var wg sync.WaitGroup
 
 	worker_iteration := func(iterable []*mandlebrot_point) {
@@ -112,6 +112,7 @@ func (p *mandlebrot_plane) iterations(max_iterations int) {
 
 			}
 		}
+		progress.Add(1)
 	}
 
 	for i := 0; i < workers; i++ { // worker pool
@@ -124,10 +125,18 @@ func (p *mandlebrot_plane) iterations(max_iterations int) {
 		}()
 	}
 
+	var current_progress int = 0
 	for i, start, end := 0, 0, 0; end < num_points; i++ { // split work
 		start = i * chunk_size
 		end = min(start+chunk_size, num_points)
 		work_queue <- p.iterable[start:end]
+
+		percent := int(progress.Load()*10) / (num_points / chunk_size)
+
+		if percent != current_progress {
+			fmt.Printf("Iterations are %d %s complete  \n", percent*10, "%")
+			current_progress = percent
+		}
 
 	}
 
@@ -143,7 +152,7 @@ func (p *mandlebrot_plane) iterations(max_iterations int) {
 	p.iterable = non_divergent
 }
 
-func (p *mandlebrot_plane) plot_to_png() {
+func (p *mandlebrot_plane) plot_to_png(x_steps int, y_steps int) {
 	width, height := x_steps, y_steps
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 
@@ -153,12 +162,11 @@ func (p *mandlebrot_plane) plot_to_png() {
 		}
 	}
 
-	for pos, point := range p.plane {
-		row := pos % y_steps
-		col := pos / x_steps
-		color_val := uint8(255 - (255 / (1 + 0.05*point.iteration)))
-		img.Set(row, col, color.RGBA{color_val, color_val, color_val, 255})
-
+	for y, row := range p.plane {
+		for x, point := range row {
+			color_val := uint8(255 - (255 / (1 + 0.05*point.iteration)))
+			img.Set(x, y_steps-y, color.RGBA{color_val, color_val, color_val, 255})
+		}
 	}
 
 	file, err := os.Create("mandlebrot.png")
@@ -174,29 +182,41 @@ func (p *mandlebrot_plane) plot_to_png() {
 }
 
 func main() {
-	flag.Parse()
-	x_steps = *rinput
-	y_steps = x_steps
-	max_iterations = *iinput
-	step_size = float64(4) / float64(x_steps)
+
+	flag.Parse() //accept user input
+
+	min_Z := complex{X: *minx_input, Y: *miny_input}
+	x_len := *maxx_input - *minx_input
+	y_len := *maxy_input - *miny_input
+	x_steps := *rinput
+	max_iterations := *iinput
+	step_size := float64(x_len) / float64(x_steps)
+	y_steps := int(y_len / step_size)
+
+	if *minx_input >= *maxx_input || *miny_input >= *maxy_input { // check user input
+		fmt.Println("upper bound must be larger than lower bound.")
+		return
+	}
+
+	if max_iterations <= 0 || *rinput <= 0 {
+		fmt.Println("integers must be positive")
+		return
+	}
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	workers = runtime.NumCPU()
 	mandlebrot_set := mandlebrot_plane{}
 
 	init_time := time.Now()
-	mandlebrot_set.init_plane(min_Z, x_steps, y_steps)
+	mandlebrot_set.init_plane(min_Z, x_steps, y_steps, step_size)
 	fmt.Printf("Initialized %d points taking %dms \n", len(mandlebrot_set.iterable), time.Since(init_time).Milliseconds())
 
 	now := time.Now()
 	mandlebrot_set.iterations(max_iterations)
-
 	end := time.Since(now).Milliseconds()
-
 	fmt.Printf("%d workers completed %d iterations on %d points in %d ms \n", workers, max_iterations, x_steps*y_steps, end)
 
 	plot_time := time.Now()
-
-	mandlebrot_set.plot_to_png()
+	mandlebrot_set.plot_to_png(x_steps, y_steps)
 	fmt.Printf("Finished plotting, it took %dms \n	", time.Since(plot_time).Milliseconds())
 }
