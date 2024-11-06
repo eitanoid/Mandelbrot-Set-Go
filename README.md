@@ -13,7 +13,7 @@ $Z_{n+1} = Z_n^2 + c$
 
 ## Description
 
-A mandlebrot set generator using Go taking in a resolution and a max iteration count and outputting a PNG file of the mandlebrot set at that depth with a brightness adjusted based on the escape iteration of each point.
+A mandlebrot set generator using Go taking in a user inputs for a region in the complex plane, resolution and a number of iterations and outputting a PNG file of the mandlebrot set at that depth with a brightness adjusted based on the escape iteration of each point.
 
 The algorithm runs concurrently with the implementation of goroutines and worker pools for an optimised runtime.
 
@@ -23,11 +23,16 @@ You can pass the following flags to the executable:
 
 ```bash
 
-usage: Mandlebrot [<flags>]
+$Mandlebrot -h
 
-Flags:
--r    The resolution of the plot (default 2000)
+usage of mandlebrot:
+
+-r    The width resolution of the plot (default 2000)
 -i    The number of iterations (default 500)
+-lx   The left x bound of the image (default -2)
+-ly   The bottom y bound of the image (default -2)
+-ux   The right x bound of the image (default 2)
+-uy   The top y bound of the image (default 2)
 
 ```
 
