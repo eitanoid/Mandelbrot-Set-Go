@@ -22,7 +22,7 @@ var (
 func main() {
 	// handle user input
 	res_in, iter_in, gif_frame_iterations_in, gifdelay_in, lx_in, ly_in, ux_in, uy_in, julia_in, julia_x, julia_y := user_input(2000, 500, 20, -2, -2, 2, 2, false, 0.35, 0.35)
-	fmt.Println(res_in, iter_in, lx_in, ly_in, ux_in, uy_in)
+	fmt.Println(res_in, iter_in, gif_frame_iterations_in, gifdelay_in, lx_in, ly_in, ux_in, uy_in)
 	min_Z := Complex{X: lx_in, Y: ly_in}
 	x_len := ux_in - lx_in
 	y_len := uy_in - ly_in

@@ -6,6 +6,7 @@ import (
 	"os"
 )
 
+// return resolution iterations gif_iterations gif_delay lx ly ux uy julia jx jy
 func user_input(res_default int, iter_default int, gifdelay_default int, lx_default float64, ly_default float64, ux_default float64, uy_default float64, julia_default bool, jx_default float64, jy_default float64) (int, int, int, int, float64, float64, float64, float64, bool, float64, float64) {
 	var res_input, iter_input, frameiter_input, gifdelay_input int
 	var lx_input, ly_input, ux_input, uy_input float64
@@ -42,11 +43,12 @@ func user_input(res_default int, iter_default int, gifdelay_default int, lx_defa
 	if err != nil { // set default and remove the rest of a bad string.
 		frameiter_input = 0
 	}
+
 	if frameiter_input != 0 {
 		fmt.Println("Enter GIF frame delay measured in 100th of a second: (Default 20)")
 		scanner.Scan()
 		arg = scanner.Text()
-		_, err = fmt.Sscanf(arg, "%d", &gifdelay_default)
+		_, err = fmt.Sscanf(arg, "%d", &gifdelay_input)
 		if err != nil { // set default and remove the rest of a bad string.
 			gifdelay_input = gifdelay_default
 		}
@@ -88,6 +90,5 @@ func user_input(res_default int, iter_default int, gifdelay_default int, lx_defa
 			jy_input = jy_default
 		}
 	}
-
-	return res_input, iter_input, gifdelay_input, frameiter_input, lx_input, ly_input, ux_input, uy_input, julia_input, jx_input, jy_input
+	return res_input, iter_input, frameiter_input, gifdelay_input, lx_input, ly_input, ux_input, uy_input, julia_input, jx_input, jy_input
 }
