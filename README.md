@@ -1,5 +1,5 @@
 
-![mandelbrot_example](https://github.com/eitanoid/Mandlebrot-Set-Go/blob/main/pictures/mandlebrot.png)
+![mandelbrot_example](https://github.com/eitanoid/Mandelbrot-Set-Go/blob/main/pictures/mandelbrot.png)
 
 ![julia_example](https://github.com/eitanoid/Mandlebrot-Set-Go/blob/main/pictures/julia.png)
 
