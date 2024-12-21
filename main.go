@@ -1,7 +1,7 @@
 package main
 
 import (
-	"flag"
+	"bufio"
 	"fmt"
 	"image"
 	"image/color"
@@ -19,11 +19,16 @@ import (
 // go routines to iterate the points by chunks
 
 //TODO:
-//
+// user can input color function
+// dynamic visualisation with a visual library like raylib or turn to gif
 
 type complex struct {
 	X, Y float64
 }
+
+var (
+	julia_c = complex{X: 0.35, Y: 0.35} // an interesting julia set value
+)
 
 type mandlebrot_point struct {
 	Z         complex
@@ -36,19 +41,121 @@ type mandlebrot_plane struct {
 	iterable []*mandlebrot_point  // slice of pointers to array
 }
 
-var ( // user input
-	rinput     = flag.Int("r", 2000, "Set the picture resolution")
-	iinput     = flag.Int("i", 500, "Set the number of iterations")
-	minx_input = flag.Float64("lx", -2, "Set the lower x bound for the picture")
-	miny_input = flag.Float64("ly", -2, "Set the lower y bound for the picture")
-	maxx_input = flag.Float64("ux", 2, "Set the upper x bound for the picture")
-	maxy_input = flag.Float64("uy", 2, "Set the upper y bound for the picture")
+var ( //user info
+	res_in  int
+	iter_in int
+	lx_in   float64
+	ly_in   float64
+	ux_in   float64
+	uy_in   float64
+	julia   bool    = false
+	j_x     float64 // c value used for the julia set c = Complex{j_x,j_y}
+	j_y     float64
 )
+
+func user_input(res_default int, iter_default int, lx_default float64, ly_default float64, ux_default float64, uy_default float64, julia_default bool, jx_default float64, jy_default float64) (int, int, float64, float64, float64, float64, bool, float64, float64) {
+	var res_input, iter_input int
+	var lx_input, ly_input, ux_input, uy_input float64
+	var julia_input bool
+	var jx_input, jy_input float64
+
+	var arg string // current arg
+	var err error
+
+	scanner := bufio.NewScanner(os.Stdin)
+
+	// NOTE: these input functions dont respond to empty strings. Maybe scan into a string and process it?
+
+	fmt.Println("Enter picture width resolution in pixels: (Default 2000px)")
+	scanner.Scan()
+	arg = scanner.Text()
+	_, err = fmt.Sscanf(arg, "%d", &res_input)
+	if err != nil { // set default and remove the rest of a bad string.
+		res_input = res_default
+	}
+
+	fmt.Println("Enter desired number of iterations: (Default 500)")
+	scanner.Scan()
+	arg = scanner.Text()
+	_, err = fmt.Sscanf(arg, "%d", &iter_input)
+	if err != nil { // set default and remove the rest of a bad string.
+		iter_input = iter_default
+	}
+
+	fmt.Println("Enter the bottom left bound for the image 2 number components seperated by a space: (Default: -2 -2)")
+	scanner.Scan()
+	arg = scanner.Text()
+	_, err = fmt.Sscanf(arg, "%f %f", &lx_input, &ly_input)
+	if err != nil { // set default and remove the rest of a bad string.
+		lx_input = lx_default
+		ly_input = ly_default
+	}
+
+	fmt.Println("Enter the top right bound for the image as 2 number components seperated by a space: (Default: 2 2)")
+	scanner.Scan()
+	arg = scanner.Text()
+	_, err = fmt.Sscanf(arg, "%f %f", &ux_input, &uy_input)
+	if err != nil { // set default and remove the rest of a bad string.
+		ux_input = ux_default
+		uy_input = uy_default
+	}
+
+	fmt.Println("Enter 'true' or 'false' to render Julia set inplace of Mandlebrot: (Default is 'false')")
+	scanner.Scan()
+	arg = scanner.Text()
+	_, err = fmt.Sscanf(arg, "%t", &julia_input)
+	if err != nil { // set default and remove the rest of a bad string.
+		julia_input = julia_default
+	}
+
+	if julia_input {
+		fmt.Println("Enter the C value for the Julia set as 2 number components seperated by a space:")
+		scanner.Scan()
+		arg = scanner.Text()
+		_, err = fmt.Sscanf(arg, "%f %f", &jx_input, &jy_input)
+		if err != nil { // set default and remove the rest of a bad string.
+			jx_input = jx_default
+			jy_input = jy_default
+		}
+	}
+	// fmt.Println("Enter picture width resolution in pixels: (Default 2000px)")
+	// 	_, err = fmt.Scanf("%d", &res_input)
+	// 	if err != nil { // set default and remove the rest of a bad string.
+	// 		fmt.Scan(&void)
+	// 		res_input = res_default
+	// 	}
+
+	// 	fmt.Println("Enter desired number of iterations: (Default 500)")
+	// 		_, err = fmt.Scanf("%d", &iter_input)
+	// 		if err != nil { // set default and remove the itert of a bad string.
+	// 			fmt.Scan(&void)
+	// 			iter_input = iter_default
+	// 		}
+
+	// fmt.Println("Enter the bottom left bound for the image as a complex number seperated by a space: (Default: -2 -2)")
+	// _, err = fmt.Scanf("%f %f", &lx_input, &ly_input)
+	// if err != nil { // set default and remove the rest of a bad string.
+	// 	fmt.Scan(&void)
+	// 	lx_input = lx_default
+	// 	ly_input = ly_default
+	// }
+
+	// fmt.Println("Enter the top right bound for the image as a complex number seperated by a space: (Default: 2 2)")
+	// _, err = fmt.Scanf("%f %f", &ux_input, &uy_input)
+	// if err != nil { // set default and remove the rest of a bad string.
+	// 	fmt.Scan(&void)
+	// 	ux_input = ux_default
+	// 	uy_input = uy_default
+	// }
+
+	return res_input, iter_input, lx_input, ly_input, ux_input, uy_input, julia_input, jx_input, jy_input
+}
+
 var (
 	workers int
 )
 
-func (p *mandlebrot_plane) init_plane(min_Z complex, x_steps int, y_steps int, step_size float64) {
+func (p *mandlebrot_plane) init_plane(min_Z complex, x_steps int, y_steps int, step_size float64, julia bool, julia_x float64, julia_y float64) {
 
 	p.plane = make([][]mandlebrot_point, y_steps)
 
@@ -63,10 +170,18 @@ func (p *mandlebrot_plane) init_plane(min_Z complex, x_steps int, y_steps int, s
 			for y := w; y < y_steps; y += workers { // rows
 				p.plane[y] = make([]mandlebrot_point, x_steps)
 				for x := 0; x < x_steps; x++ { // cols
-					point := mandlebrot_point{
-						Z:         complex{0, 0},
-						C:         complex{X: min_Z.X + float64(x)*step_size, Y: min_Z.Y + float64(y)*step_size},
-						iteration: 0}
+					var point mandlebrot_point
+					if julia {
+						point = mandlebrot_point{
+							Z:         complex{X: min_Z.X + float64(x)*step_size, Y: min_Z.Y + float64(y)*step_size},
+							C:         complex{julia_x, julia_y},
+							iteration: 0}
+					} else { // mandlebrot
+						point = mandlebrot_point{
+							Z:         complex{0, 0},
+							C:         complex{X: min_Z.X + float64(x)*step_size, Y: min_Z.Y + float64(y)*step_size},
+							iteration: 0}
+					}
 					p.plane[y][x] = point
 					p.iterable[y*x_steps+x] = &p.plane[y][x]
 				}
@@ -163,9 +278,16 @@ func (p *mandlebrot_plane) plot_to_png(x_steps int, y_steps int) {
 	}
 
 	for y, row := range p.plane {
+		// var speed uint8 = 1 // arbitrary number
 		for x, point := range row {
+			// iterations := point.iteration
+			var (
+				red   uint8 = 1 // (speed * uint8(iterations)) % 255 // multily the colir intensity by color values out of phase (255/3 = 85).
+				blue  uint8 = 1 // (speed*uint8(iterations) + 85) % 255
+				green uint8 = 1 // (speed*uint8(iterations) + 85*2) % 255
+			)
 			color_val := uint8(255 - (255 / (1 + 0.05*point.iteration)))
-			img.Set(x, y_steps-y, color.RGBA{color_val, color_val, color_val, 255})
+			img.Set(x, y_steps-y, color.RGBA{color_val * red, color_val * blue, color_val * green, 255})
 		}
 	}
 
@@ -183,22 +305,22 @@ func (p *mandlebrot_plane) plot_to_png(x_steps int, y_steps int) {
 
 func main() {
 
-	flag.Parse() //accept user input
-
-	min_Z := complex{X: *minx_input, Y: *miny_input}
-	x_len := *maxx_input - *minx_input
-	y_len := *maxy_input - *miny_input
-	x_steps := *rinput
-	max_iterations := *iinput
+	res_in, iter_in, lx_in, ly_in, ux_in, uy_in, julia_in, julia_x, julia_y := user_input(2000, 500, -2, -2, 2, 2, false, 0, 0)
+	fmt.Println(res_in, iter_in, lx_in, ly_in, ux_in, uy_in)
+	min_Z := complex{X: lx_in, Y: ly_in}
+	x_len := ux_in - lx_in
+	y_len := uy_in - ly_in
+	x_steps := res_in
+	max_iterations := iter_in
 	step_size := float64(x_len) / float64(x_steps)
 	y_steps := int(y_len / step_size)
 
-	if *minx_input >= *maxx_input || *miny_input >= *maxy_input { // check user input
+	if lx_in >= ux_in || ly_in >= uy_in { // check user input
 		fmt.Println("upper bound must be larger than lower bound.")
 		return
 	}
 
-	if max_iterations <= 0 || *rinput <= 0 {
+	if max_iterations <= 0 || res_in <= 0 {
 		fmt.Println("integers must be positive")
 		return
 	}
@@ -208,7 +330,7 @@ func main() {
 	mandlebrot_set := mandlebrot_plane{}
 
 	init_time := time.Now()
-	mandlebrot_set.init_plane(min_Z, x_steps, y_steps, step_size)
+	mandlebrot_set.init_plane(min_Z, x_steps, y_steps, step_size, julia_in, julia_x, julia_y)
 	fmt.Printf("Initialized %d points taking %dms \n", len(mandlebrot_set.iterable), time.Since(init_time).Milliseconds())
 
 	now := time.Now()
