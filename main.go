@@ -109,7 +109,7 @@ func user_input(res_default int, iter_default int, lx_default float64, ly_defaul
 	}
 
 	if julia_input {
-		fmt.Println("Enter the C value for the Julia set as 2 number components seperated by a space:")
+		fmt.Println("Enter the C value for the Julia set as 2 number components seperated by a space: (Default: 0.35 0.35)")
 		scanner.Scan()
 		arg = scanner.Text()
 		_, err = fmt.Sscanf(arg, "%f %f", &jx_input, &jy_input)
@@ -305,7 +305,7 @@ func (p *mandlebrot_plane) plot_to_png(x_steps int, y_steps int) {
 
 func main() {
 
-	res_in, iter_in, lx_in, ly_in, ux_in, uy_in, julia_in, julia_x, julia_y := user_input(2000, 500, -2, -2, 2, 2, false, 0, 0)
+	res_in, iter_in, lx_in, ly_in, ux_in, uy_in, julia_in, julia_x, julia_y := user_input(2000, 500, -2, -2, 2, 2, false, 0.35, 0.35)
 	fmt.Println(res_in, iter_in, lx_in, ly_in, ux_in, uy_in)
 	min_Z := complex{X: lx_in, Y: ly_in}
 	x_len := ux_in - lx_in
