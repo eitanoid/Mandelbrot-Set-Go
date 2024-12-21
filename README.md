@@ -1,7 +1,7 @@
 
-![mandelbrot_example](https://github.com/user-attachments/assets/a5db090a-e2a5-47bc-b6b3-3d84b619391f)
+![mandelbrot_example](https://github.com/eitanoid/Mandlebrot-Set-Go/blob/main/pictures/mandlebrot.png)
 
-![julia_example]()
+![julia_example](https://github.com/eitanoid/Mandlebrot-Set-Go/blob/main/pictures/julia.png)
 
 # The Mandelbrot Set
 
