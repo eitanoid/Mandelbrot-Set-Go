@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/color/palette"
@@ -57,20 +58,41 @@ func (p *Mandelbrot_Plane) Plot_to_Image(max_iter int) image.Image {
 
 func (p *Mandelbrot_Plane) Plot_to_GIF(iter_per_frame int, max_iter int, delay int) {
 	//TODO: output/ needs to be a temp directory not a permenant one!
-
+	var empty bool // is the iterables empty?
 	gif_images := []*image.Paletted{}
 	delays := []int{}
 
 	// create the gif
 	for i := 1; i*iter_per_frame <= max_iter; i++ {
-		p.Iterations(iter_per_frame)
-		img := p.Plot_to_Image(iter_per_frame * i)
-		bounds := img.Bounds()
-		palettedImage := image.NewPaletted(bounds, palette.Plan9) // paletter?
-		draw.FloydSteinberg.Draw(palettedImage, bounds, img, image.Point{})
-		gif_images = append(gif_images, palettedImage)
-		delays = append(delays, delay)
+		var img image.Image
+		if len(p.Iterable) != 0 {
+			p.Iterations(iter_per_frame)
+			img = p.Plot_to_Image(iter_per_frame * i)
+			// pallette
+			bounds := img.Bounds()
+			palettedImage := image.NewPaletted(bounds, palette.Plan9) // paletter?
+			draw.FloydSteinberg.Draw(palettedImage, bounds, img, image.Point{})
+			//add to gif array
+			gif_images = append(gif_images, palettedImage)
+			delays = append(delays, delay)
+		} else {
+			if !empty { // first empty toogles this code
+				img = p.Plot_to_Image(iter_per_frame * i)
+				bounds := img.Bounds()
+				//pallette
+				palettedImage := image.NewPaletted(bounds, palette.Plan9) // paletter?
+				draw.FloydSteinberg.Draw(palettedImage, bounds, img, image.Point{})
+				// add to gif array
+				gif_images = append(gif_images, palettedImage)
+				delays = append(delays, delay)
+			} else {
+				gif_images = append(gif_images, gif_images[i-2]) // handle the empty case
+				delays = append(delays, delay)
+			}
+		}
+		fmt.Printf("Finished loop %d / %d \n", i, max_iter/iter_per_frame)
 	}
+
 	outGif := &gif.GIF{
 		Image: gif_images,
 		Delay: delays,

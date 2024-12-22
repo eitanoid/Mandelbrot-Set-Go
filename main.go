@@ -14,6 +14,7 @@ import (
 //TODO:
 // user can input color function
 // dynamic visualisation with a visual library like raylib or turn to gif
+// gif creation is VERY unoptimal, only uses one thread.
 
 var (
 	workers int // can limit max goroutines

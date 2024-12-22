@@ -112,12 +112,14 @@ func (p *Mandelbrot_Plane) Iterations(max_iterations int) {
 		start = i * chunk_size
 		end = min(start+chunk_size, num_points)
 		work_queue <- p.Iterable[start:end]
+		if num_points != 0 && chunk_size != 0 && num_points >= chunk_size {
+			percent := int(progress.Load()*10) / (num_points / chunk_size)
+			if percent != current_progress {
+				fmt.Printf("Iterations are %d %s complete  \n", percent*10, "%")
+				current_progress = percent
 
-		percent := int(progress.Load()*10) / (num_points / chunk_size)
+			}
 
-		if percent != current_progress {
-			fmt.Printf("Iterations are %d %s complete  \n", percent*10, "%")
-			current_progress = percent
 		}
 
 	}
