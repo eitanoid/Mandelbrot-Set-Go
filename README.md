@@ -1,7 +1,7 @@
 
 | Mandelbrot | Julia | Julia GIF |
 | :-         | :-    | :-        |
-| ![mandelbrot_example](https://github.com/eitanoid/Mandelbrot-Set-Go/blob/main/pictures/mandelbrot.png) | ![julia_example](https://github.com/eitanoid/Mandlebrot-Set-Go/blob/main/pictures/julia.png) | ![gif example](https://github.com/eitanoid/Mandelbrot-Set-Go/blob/main/pictures/julia.gif) |
+| ![mandelbrot_example](https://github.com/eitanoid/Mandelbrot-Set-Go/blob/main/pictures/mandelbrot.png) | ![julia_example](https://github.com/eitanoid/Mandlebrot-Set-Go/blob/main/pictures/julia.png) | ![gif example](https://github.com/eitanoid/Mandelbrot-Set-Go/blob/main/pictures/julia_gif.gif) |
 
 # The Mandelbrot Set
 
