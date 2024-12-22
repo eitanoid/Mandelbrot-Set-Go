@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+	// _ "net/http/pprof"
 	"runtime"
 	"time"
 )
@@ -11,16 +14,20 @@ import (
 // split the array based on the number of workers
 // go routines to iterate the points by chunks
 
-//TODO:
+// TODO:
 // user can input color function
 // dynamic visualisation with a visual library like raylib or turn to gif
-// gif creation is VERY unoptimal, only uses one thread.
-
+// gif creation is VERY unoptimal, maybe use ffmpeg
+// create a gif palette from the color function? would make things look nicer.
 var (
 	workers int // can limit max goroutines
 )
 
 func main() {
+	// go func() { // pprof
+	// 	log.Println(http.ListenAndServe("localhost:6060", nil))
+	// }()
+
 	// handle user input
 	res_in, iter_in, gif_frame_iterations_in, gifdelay_in, lx_in, ly_in, ux_in, uy_in, julia_in, julia_x, julia_y := user_input(2000, 500, 20, -2, -2, 2, 2, false, 0.35, 0.35)
 	fmt.Println(res_in, iter_in, gif_frame_iterations_in, gifdelay_in, lx_in, ly_in, ux_in, uy_in)

@@ -37,14 +37,14 @@ func (p *Mandelbrot_Plane) Plot_to_Image(max_iter int) image.Image {
 	}
 
 	for y, row := range p.Plane {
-		// var speed uint8 = 1 // arbitrary number
+		var speed uint8 = 1 // arbitrary number
 		for x, point := range row {
-			// iterations := point.iteration
+			iterations := point.Iteration
 			if point.Iteration != float64(max_iter) {
 				var (
-					red   uint8 = 1 // (speed * uint8(iterations)) % 255 // multily the colir intensity by color values out of phase (255/3 = 85).
-					blue  uint8 = 1 // (speed*uint8(iterations) + 85) % 255
-					green uint8 = 1 // (speed*uint8(iterations) + 85*2) % 255
+					red   = (speed * uint8(iterations)) % 255 // multily the colir intensity by color values out of phase (255/3 = 85).
+					blue  = (speed*uint8(iterations) + 85) % 255
+					green = (speed*uint8(iterations) + 85*2) % 255
 				)
 				color_val := uint8(255 - (255 / (1 + 0.05*point.Iteration)))
 				img.Set(x, height-y, color.RGBA{color_val * red, color_val * blue, color_val * green, 255})
