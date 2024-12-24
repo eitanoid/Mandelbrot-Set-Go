@@ -20,7 +20,7 @@ func user_input(res_default int, iter_default int, gifdelay_default int, lx_defa
 
 	// NOTE: these input functions dont respond to empty strings. Maybe scan into a string and process it?
 
-	fmt.Println("Enter picture width resolution in pixels: (Default 2000px)")
+	fmt.Println("Enter picture width resolution in pixels: (Default 2000)")
 	scanner.Scan()
 	arg = scanner.Text()
 	_, err = fmt.Sscanf(arg, "%d", &res_input)

@@ -10,6 +10,7 @@ import (
 	"image/png"
 	"log"
 	"os"
+	"sync"
 )
 
 func Load_Image(path string) image.Image {
@@ -45,7 +46,7 @@ func (p *Mandelbrot_Plane) Plot_to_Image(max_iter int) image.Image {
 					red   = (speed * uint8(iterations)) % 255 // multily the colir intensity by color values out of phase (255/3 = 85).
 					blue  = (speed*uint8(iterations) + 85) % 255
 					green = (speed*uint8(iterations) + 85*2) % 255
-				)
+				) // TODO: normalize the color vector
 				color_val := uint8(255 - (255 / (1 + 0.05*point.Iteration)))
 				img.Set(x, height-y, color.RGBA{color_val * red, color_val * blue, color_val * green, 255})
 			} else {
@@ -57,41 +58,46 @@ func (p *Mandelbrot_Plane) Plot_to_Image(max_iter int) image.Image {
 }
 
 func (p *Mandelbrot_Plane) Plot_to_GIF(iter_per_frame int, max_iter int, delay int) {
-	//TODO: output/ needs to be a temp directory not a permenant one!
-	var empty bool // is the iterables empty?
-	gif_images := []*image.Paletted{}
-	delays := []int{}
 
-	// create the gif
+	generated_images := []image.Image{}
+
+	// generate all the frames
 	for i := 1; i*iter_per_frame <= max_iter; i++ {
-		var img image.Image
 		if len(p.Iterable) != 0 {
+			// generate the iteration
 			p.Iterations(iter_per_frame)
-			img = p.Plot_to_Image(iter_per_frame * i)
-			// pallette
-			bounds := img.Bounds()
-			palettedImage := image.NewPaletted(bounds, palette.Plan9) // paletter?
-			draw.FloydSteinberg.Draw(palettedImage, bounds, img, image.Point{})
-			//add to gif array
-			gif_images = append(gif_images, palettedImage)
-			delays = append(delays, delay)
-		} else {
-			if !empty { // first empty toogles this code
-				img = p.Plot_to_Image(iter_per_frame * i)
-				bounds := img.Bounds()
-				//pallette
+			img := p.Plot_to_Image(iter_per_frame * i)
+			generated_images = append(generated_images, img)
+		}
+	}
+
+	//Palette the images:
+	fmt.Println("Finished generating images, now processing gif.")
+	num_frames := len(generated_images)
+	chunk_size := num_frames/workers + 1
+	bounds := generated_images[0].Bounds()
+	gif_images := make([]*image.Paletted, num_frames)
+	delays := make([]int, num_frames)
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func(w int) { // chunked approach
+			defer wg.Done()
+			start := w * chunk_size
+			end := min(start+chunk_size, num_frames)
+			for i := start; i < end; i++ {
+				img := generated_images[i]
 				palettedImage := image.NewPaletted(bounds, palette.Plan9) // paletter?
 				draw.FloydSteinberg.Draw(palettedImage, bounds, img, image.Point{})
-				// add to gif array
-				gif_images = append(gif_images, palettedImage)
-				delays = append(delays, delay)
-			} else {
-				gif_images = append(gif_images, gif_images[i-2]) // handle the empty case
-				delays = append(delays, delay)
+				// add image to array for gif
+				gif_images[i] = palettedImage
+				delays[i] = delay
 			}
-		}
-		fmt.Printf("Finished loop %d / %d \n", i, max_iter/iter_per_frame)
+		}(w)
 	}
+	fmt.Println("Created all goroutines.")
+	wg.Wait()
+	fmt.Println("Creating gif.")
 
 	outGif := &gif.GIF{
 		Image: gif_images,

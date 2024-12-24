@@ -26,7 +26,6 @@ func (p *Mandelbrot_Plane) Init_plane(min_Z Complex, x_steps int, y_steps int, s
 	p.Plane = make([][]Mandelbrot_Point, y_steps)
 
 	p.Iterable = make([]*Mandelbrot_Point, x_steps*y_steps) // initialize slice
-
 	var wg sync.WaitGroup
 	for w := 0; w < workers; w++ { //populate slices using goroutines
 
