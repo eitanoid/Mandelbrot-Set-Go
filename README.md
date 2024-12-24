@@ -37,7 +37,7 @@ Example Use:
 
 $ Mandelbrot
 
-> Enter picture width resolution in pixels: (Default 2000px)
+> Enter picture width resolution in pixels: (Default 2000)
 $ 1920
 
 > Enter desired number of iterations: (Default 500)
@@ -63,6 +63,11 @@ $ true
 > Enter the C value for the Julia set as 2 number components seperated by a space: (Default: 0.35 0.35)
 $ -0.8 0.156
 ```
+
+## Warning
+
+This project will generate gifs at any size, however at present no compression is used, which can result in MASSIVE file sizes at large gif resolutions.
+
 
 ## Prerequisites
 

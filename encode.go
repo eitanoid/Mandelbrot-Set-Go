@@ -91,6 +91,7 @@ func (p *Mandelbrot_Plane) Plot_to_GIF(iter_per_frame int, max_iter int, delay i
 				draw.FloydSteinberg.Draw(palettedImage, bounds, img, image.Point{})
 				// add image to array for gif
 				gif_images[i] = palettedImage
+				generated_images[i] = nil
 				delays[i] = delay
 			}
 		}(w)
