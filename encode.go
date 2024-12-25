@@ -44,8 +44,8 @@ func (p *Mandelbrot_Plane) Plot_to_Image(max_iter int) image.Image {
 			if point.Iteration != float64(max_iter) {
 				var (
 					red   = (speed * uint8(iterations)) % 255 // multily the colir intensity by color values out of phase (255/3 = 85).
-					blue  = (speed*uint8(iterations) + 85) % 255
-					green = (speed*uint8(iterations) + 85*2) % 255
+					blue  = (speed*uint8(iterations) + 20) % 255
+					green = (speed*uint8(iterations) + 20*2) % 255
 				) // TODO: normalize the color vector
 				color_val := uint8(255 - (255 / (1 + 0.05*point.Iteration)))
 				img.Set(x, height-y, color.RGBA{color_val * red, color_val * blue, color_val * green, 255})
@@ -73,11 +73,19 @@ func (p *Mandelbrot_Plane) Plot_to_GIF(iter_per_frame int, max_iter int, delay i
 
 	//Palette the images:
 	fmt.Println("Finished generating images, now processing gif.")
+
 	num_frames := len(generated_images)
 	chunk_size := num_frames/workers + 1
 	bounds := generated_images[0].Bounds()
 	gif_images := make([]*image.Paletted, num_frames)
 	delays := make([]int, num_frames)
+	palette := palette.Plan9
+
+	outGif := &gif.GIF{
+		Image: gif_images,
+		Delay: delays,
+	}
+
 	var wg sync.WaitGroup
 	for w := 0; w < workers; w++ {
 		wg.Add(1)
@@ -87,12 +95,12 @@ func (p *Mandelbrot_Plane) Plot_to_GIF(iter_per_frame int, max_iter int, delay i
 			end := min(start+chunk_size, num_frames)
 			for i := start; i < end; i++ {
 				img := generated_images[i]
-				palettedImage := image.NewPaletted(bounds, palette.Plan9) // paletter?
+				palettedImage := image.NewPaletted(bounds, palette) // paletter?
 				draw.FloydSteinberg.Draw(palettedImage, bounds, img, image.Point{})
 				// add image to array for gif
-				gif_images[i] = palettedImage
+				outGif.Image[i] = palettedImage
+				outGif.Delay[i] = delay
 				generated_images[i] = nil
-				delays[i] = delay
 			}
 		}(w)
 	}
@@ -100,10 +108,6 @@ func (p *Mandelbrot_Plane) Plot_to_GIF(iter_per_frame int, max_iter int, delay i
 	wg.Wait()
 	fmt.Println("Creating gif.")
 
-	outGif := &gif.GIF{
-		Image: gif_images,
-		Delay: delays,
-	}
 	file, err := os.Create("out.gif")
 	if err != nil {
 		log.Fatal(err)
